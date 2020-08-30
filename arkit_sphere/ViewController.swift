@@ -20,14 +20,8 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         
         sceneView.delegate = self
         
-        // シーンを作成して登録
         sceneView.scene = SCNScene()
-        
-        // 特徴点を表示
         sceneView.debugOptions = [.showFeaturePoints]
-        
-        
-        // 平面検出
         let configuration = ARWorldTrackingConfiguration()
         configuration.planeDetection = .horizontal
         sceneView.session.run(configuration)
@@ -74,27 +68,20 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     
     // ARSCNViewDelegate#renderer
     // Tells the delegate that a SceneKit node's properties have been updated to match the current state of its corresponding anchor.
-    // ノードのプロパティに現在のアンカーの状態が反映されたときに呼び出される
     func renderer(_ renderer: SCNSceneRenderer, didUpdate node: SCNNode, for anchor: ARAnchor) {
         guard let planeAnchor = anchor as? ARPlaneAnchor else  { return }
         
         DispatchQueue.main.async(execute: {
             for childNode in node.childNodes {
-                // 追加したノードの平面ジオメトリを取得
                 guard let plainGeometry = childNode.geometry as? ARSCNPlaneGeometry else { break }
-                // 検出した平面の形状 (アンカーのジオメトリ) に平面ジオメトリを合わせる
                 plainGeometry.update(from: planeAnchor.geometry)
-                // テキスト用ノードを更新
                 guard let textNode = childNode.childNodes.first,let text = textNode.geometry as? SCNText else { break }
-                // 検出した平面のサイズからフォントのサイズをざっくり決める
                 let size = CGFloat(min(planeAnchor.extent.x, planeAnchor.extent.z) / 10.0)
                 text.font = UIFont.boldSystemFont(ofSize: size)
-                // テキストノードの中心を座標の基準にする
                 let (min, max) = (textNode.boundingBox)
                 let textBoundsWidth = (max.x - min.x)
                 let textBoundsheight = (max.y - min.y)
                 textNode.pivot = SCNMatrix4MakeTranslation(textBoundsWidth/2 + min.x, textBoundsheight/2 + min.y, 0)
-                // 検出した平面の中心にテキストノードを置く
                 textNode.position = SCNVector3(planeAnchor.center)
                 break
             }
@@ -103,11 +90,9 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     
     // ARSCNViewDelegate#renderer
     // Tells the delegate that the SceneKit node corresponding to a removed AR anchor has been removed from the scene.
-    // 削除されたアンカーに対応するノードが削除されたときに呼び出される
     func renderer(_ renderer: SCNSceneRenderer, didRemove node: SCNNode, for anchor: ARAnchor) {
         for childNode in node.childNodes {
             if childNode.geometry as? ARSCNPlaneGeometry != nil {
-                // 追加した平面ジオメトリ用ノードを削除
                 childNode.removeFromParentNode()
                 break
             }
